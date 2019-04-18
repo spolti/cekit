@@ -246,7 +246,9 @@ class Image(Descriptor):
             if override.osbs != None:
                 self.osbs = override.osbs.merge(self.osbs)
 
-            # should we really allow overrides to contribute content?
+            if 'install' not in self.packages:
+                self.packages._descriptor['install'] = list()
+
             for package in override.packages.install:
                 if package not in self.packages.install:
                     self.packages.install.append(package)
@@ -306,8 +308,10 @@ class Image(Descriptor):
         # update ourself based on module declarations
         # final order of modules to be installed
         self.modules._descriptor['install'] = list(install_list.values())
+
         # all package repositories required for installing packages
         self.packages._descriptor['repositories'] = list(self._package_repositories.values())
+
         # final 'run' value
         if self.run:
             self.run = self.run.merge(self._module_run)
@@ -316,6 +320,8 @@ class Image(Descriptor):
 
     def process_install_list(self, source, to_install_list, install_list, module_registry):
         module_overrides = self._image_overrides['modules']
+        if len(to_install_list) == 0:
+            to_install_list = reversed(module_overrides.values())
         artifact_overrides = self._image_overrides['artifacts']
         for to_install in to_install_list:
             logger.debug("Preparing module '%s' required by '%s'."
@@ -372,7 +378,6 @@ class Image(Descriptor):
             self.process_install_list(module, module.modules.install, install_list, module_registry)
 
             # move this module to the end of the list.
-            install_list.pop(to_install.name)
             install_list[to_install.name] = to_install
 
     # helper to simplify merging lists of objects
